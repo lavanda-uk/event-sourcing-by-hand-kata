@@ -12,8 +12,7 @@ class Booking
   end
 
   def confirm
-    events = load_events_for_booking
-    self.state = build_state(events)
+    current_state
 
     raise StandardError, 'Booking cannot be confirmed' unless can_be_confirmed?
 
@@ -21,6 +20,10 @@ class Booking
   end
 
   def cancel
+    current_state
+
+    raise StandardError, 'Booking cannot be canceled' unless can_be_canceled?
+
     client.publish(BookingCanceled.new(data: {}), stream_name: stream_name)
   end
 
@@ -28,8 +31,17 @@ class Booking
 
   attr_accessor :id, :state
 
+  def current_state
+    events = load_events_for_booking
+    self.state = build_state(events)
+  end
+
   def can_be_confirmed?
     state.inquiry?
+  end
+
+  def can_be_canceled?
+    state.inquiry? || state.confirmed?
   end
 
   def stream_name
@@ -77,13 +89,41 @@ RSpec.describe Booking do
       expect { booking.confirm }.to raise_error(StandardError, 'Booking cannot be confirmed')
     end
 
-    context 'when already canceled' do
+    context 'when canceled' do
       it 'cannot be confirmed' do
         booking = Booking.new
 
         booking.cancel
 
         expect { booking.confirm }.to raise_error(StandardError, 'Booking cannot be confirmed')
+      end
+    end
+  end
+
+  describe '#cancel' do
+    it "cancels the booking" do
+      booking = Booking.new
+
+      booking.cancel
+
+      expect(event_store).to have_published(an_event(BookingCanceled))
+    end
+
+    it "raises an error when booking is canceled twice" do
+      booking = Booking.new
+
+      booking.cancel
+
+      expect { booking.cancel }.to raise_error(StandardError, 'Booking cannot be canceled')
+    end
+
+    context 'when booking is confirmed' do
+      it 'can be canceled' do
+        booking = Booking.new
+
+        booking.cancel
+
+        expect(event_store).to have_published(an_event(BookingCanceled))
       end
     end
   end
