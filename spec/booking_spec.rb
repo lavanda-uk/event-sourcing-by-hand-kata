@@ -3,6 +3,9 @@ require "rails_helper"
 class BookingConfirmed < RailsEventStore::Event
 end
 
+class BookingCanceled < RailsEventStore::Event
+end
+
 class Booking
   def initialize
     self.id = SecureRandom.hex
@@ -10,16 +13,24 @@ class Booking
 
   def confirm
     events = load_events_for_booking
-    state = build_state(events)
+    self.state = build_state(events)
 
-    raise 'Booking is already confirmed' if state.confirmed?
+    raise StandardError, 'Booking cannot be confirmed' unless can_be_confirmed?
 
-    Rails.configuration.event_store.publish(BookingConfirmed.new(data: {}), stream_name: stream_name)
+    client.publish(BookingConfirmed.new(data: {}), stream_name: stream_name)
+  end
+
+  def cancel
+    client.publish(BookingCanceled.new(data: {}), stream_name: stream_name)
   end
 
   private
 
-  attr_accessor :id
+  attr_accessor :id, :state
+
+  def can_be_confirmed?
+    state.inquiry?
+  end
 
   def stream_name
     "booking-#{id}"
@@ -39,6 +50,8 @@ class Booking
     events.each do |event|
       if event.is_a?(BookingConfirmed)
         result = 'confirmed'
+      elsif event.is_a?(BookingCanceled)
+        result = 'canceled'
       end
     end
 
@@ -47,20 +60,32 @@ class Booking
 end
 
 RSpec.describe Booking do
-  it "confirms the booking" do
-    booking = Booking.new
+  describe '#confirm' do
+    it "confirms the booking" do
+      booking = Booking.new
 
-    booking.confirm
+      booking.confirm
 
-    expect(event_store).to have_published(an_event(BookingConfirmed))
-  end
+      expect(event_store).to have_published(an_event(BookingConfirmed))
+    end
 
-  it "raises an error when booking is confirmed twice" do
-    booking = Booking.new
+    it "raises an error when booking is confirmed twice" do
+      booking = Booking.new
 
-    booking.confirm
+      booking.confirm
 
-    expect { booking.confirm }.to raise_error
+      expect { booking.confirm }.to raise_error(StandardError, 'Booking cannot be confirmed')
+    end
+
+    context 'when already canceled' do
+      it 'cannot be confirmed' do
+        booking = Booking.new
+
+        booking.cancel
+
+        expect { booking.confirm }.to raise_error(StandardError, 'Booking cannot be confirmed')
+      end
+    end
   end
 
   def event_store
