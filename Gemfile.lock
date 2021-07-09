@@ -151,6 +151,10 @@ GEM
     rb-fsevent (0.11.0)
     rb-inotify (0.10.1)
       ffi (~> 1.0)
+    rspec (3.10.0)
+      rspec-core (~> 3.10.0)
+      rspec-expectations (~> 3.10.0)
+      rspec-mocks (~> 3.10.0)
     rspec-core (3.10.1)
       rspec-support (~> 3.10.0)
     rspec-expectations (3.10.1)
@@ -174,6 +178,8 @@ GEM
     ruby_event_store-browser (2.2.0)
       ruby_event_store (= 2.2.0)
       sinatra
+    ruby_event_store-rspec (2.2.0)
+      rspec (~> 3.0)
     sinatra (2.1.0)
       mustermann (~> 1.0)
       rack (~> 2.2)
@@ -209,6 +215,7 @@ DEPENDENCIES
   rails (~> 6.1.4)
   rails_event_store (~> 2.2.0)
   rspec-rails
+  ruby_event_store-rspec
   spring
   sqlite3 (~> 1.4)
   tzinfo-data
