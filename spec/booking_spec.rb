@@ -4,8 +4,45 @@ class BookingConfirmed < RailsEventStore::Event
 end
 
 class Booking
+  def initialize
+    self.id = SecureRandom.hex
+  end
+
   def confirm
-    Rails.configuration.event_store.publish(BookingConfirmed.new(data: {}))
+    events = load_events_for_booking
+    state = build_state(events)
+
+    raise 'Booking is already confirmed' if state.confirmed?
+
+    Rails.configuration.event_store.publish(BookingConfirmed.new(data: {}), stream_name: stream_name)
+  end
+
+  private
+
+  attr_accessor :id
+
+  def stream_name
+    "booking-#{id}"
+  end
+
+  def load_events_for_booking
+    client.read.stream(stream_name).to_a
+  end
+
+  def client
+    @client ||= RailsEventStore::Client.new
+  end
+  
+  def build_state(events)
+    result = 'inquiry'
+
+    events.each do |event|
+      if event.is_a?(BookingConfirmed)
+        result = 'confirmed'
+      end
+    end
+
+    ActiveSupport::StringInquirer.new(result)
   end
 end
 
