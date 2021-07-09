@@ -1,4 +1,6 @@
-require "rails_helper"
+# frozen_string_literal: true
+
+require 'rails_helper'
 
 class BookingConfirmed < RailsEventStore::Event
 end
@@ -55,7 +57,7 @@ class Booking
   def client
     @client ||= RailsEventStore::Client.new
   end
-  
+
   def build_state(events)
     result = 'inquiry'
 
@@ -73,7 +75,7 @@ end
 
 RSpec.describe Booking do
   describe '#confirm' do
-    it "confirms the booking" do
+    it 'confirms the booking' do
       booking = Booking.new
 
       booking.confirm
@@ -81,7 +83,7 @@ RSpec.describe Booking do
       expect(event_store).to have_published(an_event(BookingConfirmed))
     end
 
-    it "raises an error when booking is confirmed twice" do
+    it 'raises an error when booking is confirmed twice' do
       booking = Booking.new
 
       booking.confirm
@@ -101,7 +103,7 @@ RSpec.describe Booking do
   end
 
   describe '#cancel' do
-    it "cancels the booking" do
+    it 'cancels the booking' do
       booking = Booking.new
 
       booking.cancel
@@ -109,7 +111,7 @@ RSpec.describe Booking do
       expect(event_store).to have_published(an_event(BookingCanceled))
     end
 
-    it "raises an error when booking is canceled twice" do
+    it 'raises an error when booking is canceled twice' do
       booking = Booking.new
 
       booking.cancel
